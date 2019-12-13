@@ -1471,6 +1471,7 @@ CPUINFO() {
   # If no model detected, try to use lscpu
   [[ -z $model_cpu ]] && (command -v lscpu > /dev/null) && {
     model_cpu=$(lscpu | gawk -F: '/^Model name/{print $2}')
+    model_version=$(lscpu | gawk -F: '$1=="Model" {gsub("  ","",$NF); print $NF}')
   }
 
   # If no model detected (e.g. on Itanium), try to use vendor+family
@@ -1547,11 +1548,18 @@ CPUINFO() {
   # ht=hyper-threading  *  aes=AES-NI  *  constant_tsc=Constant Time Stamp Counter
   cpu_flags=$(egrep -o "pae|lm|vmx|svm|ht|aes|constant_tsc|rdrand|nx" <"$cpuinfo_input" | sort -u | sed ':a;N;$!ba;s/\n/,/g')
   [[ -n $cpu_flags ]] && cpu_flags="(flags: $cpu_flags)"
+
+  # Get Min and Max frequency, (if lscpu available)
+  command -v lscpu > /dev/null && {
+    cpu_min_freq=$(lscpu | awk '/^CPU min MHz/{print $NF/1000}')
+    cpu_max_freq=$(lscpu | awk '/^CPU max MHz/{print $NF/1000}')
+    cpu_dyn_freq="${cpu_min_freq}-${cpu_max_freq} GHz"
+  }
   
   # Print it all out
   echo -e "${c[H1]}CPU${c[0]}"
-  echo -e "  ${c[Imp]}${num_cpu} logical processors${c[0]} ${cores1}"
-  echo -e "  ${model_cpu} ${cpu_flags} ${coresNthreads}"
+  echo -e "  ${c[Imp]}${num_cpu} logical processors${c[0]} ${cores1} [${cpu_dyn_freq}]"
+  echo -e "  ${model_cpu} [version: ${model_version:-"NA"}] ${cpu_flags} ${coresNthreads}"
   echo -en $XSOS_HEADING_SEPARATOR
 }
 
