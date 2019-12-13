@@ -1467,14 +1467,19 @@ CPUINFO() {
   
   # Get model of cpu
   model_cpu=$(gawk -F: '/^model name/{print $2; exit}' <"$cpuinfo_input")
-  
+
+  # If no model detected, try to use lscpu
+  [[ -z $model_cpu ]] && (command -v lscpu > /dev/null) && {
+    model_cpu=$(lscpu | gawk -F: '/^Model name/{print $2}')
+  }
+
   # If no model detected (e.g. on Itanium), try to use vendor+family
   [[ -z $model_cpu ]] && {
     vendor=$(gawk -F: '/^vendor /{print $2; exit}' <"$cpuinfo_input")
     family=$(gawk -F: '/^family /{print $2; exit}' <"$cpuinfo_input")
     model_cpu="$vendor$family"
   }
-  
+
   # Clean up cpu model string
   model_cpu=$(sed -e 's,(R),,g' -e 's,(TM),,g' -e 's,  *, ,g' -e 's,^ ,,' <<<"$model_cpu")
   
@@ -1483,7 +1488,12 @@ CPUINFO() {
   
   # Get number of physical processors
   num_cpu_phys=$(grep '^physical id' <"$cpuinfo_input" | sort -u | wc -l)
-  
+
+  # If num_cpu_phys is not detected, try to use lscpu
+  [[ $num_cpu_phys == 0 ]] && (command -v lscpu > /dev/null) && {
+    num_cpu_phys=$(lscpu | awk '/^Socket/{print $2}')
+  }
+
   # If "physical id" not found, we cannot make any assumptions (Virtualization--)
   # But still, multiplying by 0 in some crazy corner case is bad, so set it to 1
   # If num of physical *was* detected, add it to the beginning of the model string
@@ -1494,6 +1504,11 @@ CPUINFO() {
     
     # Detect number of threads (logical) per cpu
     num_threads_per_cpu=$(gawk '/^siblings/{print $3; exit}' <"$cpuinfo_input")
+   
+    # If num_threads_per_cpu not detected, try to use lscpu
+    [[ -z $num_threads_per_cpu ]] && (command -v lscpu > /dev/null) && {
+      num_threads_per_cpu=$(lscpu | awk '/^Thread/{print $NF}')
+    } 
     
     # Two possibile ways to detect number of cores
     cpu_cores=$(gawk '/^cpu cores/{print $4; exit}' <"$cpuinfo_input")
@@ -1508,6 +1523,11 @@ CPUINFO() {
       num_cores_per_cpu=$core_id
     fi
     
+    # If num_cores_per_cpu is not detected, try to use lscpu
+    [[ -z $num_cores_per_cpu ]] && (command -v lscpu > /dev/null) && {
+      num_cores_per_cpu=$(lscpu | awk '/^Core\(s\) per socket/{print $NF}')
+    }
+
     # If found info on cores, setup core variables for printing
     if [[ -n $num_cores_per_cpu ]]; then
       cores1="($((num_cpu_phys*num_cores_per_cpu)) CPU cores)"
