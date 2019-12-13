@@ -1559,7 +1559,7 @@ CPUINFO() {
   # Print it all out
   echo -e "${c[H1]}CPU${c[0]}"
   echo -e "  ${c[Imp]}${num_cpu} logical processors${c[0]} ${cores1} [${cpu_dyn_freq}]"
-  echo -e "  ${model_cpu} [version: ${model_version:-"NA"}] ${cpu_flags} ${coresNthreads}"
+  echo -e "  ${model_cpu} [${cpu_dyn_freq}] ${model_version} ${cpu_flags} ${coresNthreads}"
   echo -en $XSOS_HEADING_SEPARATOR
 }
 
